@@ -43,6 +43,12 @@
             <artifactId>s3</artifactId>
         </dependency>
 
+        <!-- Amazon STS 2.x version （Security Token Service，安全令牌服务，用于生成临时访问凭证） -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>sts</artifactId>
+        </dependency>
+
         <!-- FreeMarker（模板引擎） -->
         <dependency>
             <groupId>org.freemarker</groupId>

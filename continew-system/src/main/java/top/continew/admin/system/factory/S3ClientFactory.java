@@ -20,12 +20,14 @@ import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.utils.SdkAutoCloseable;
 import top.continew.admin.system.model.entity.StorageDO;
+import top.continew.admin.system.model.resp.StsCredentialsResp;
 
 import java.net.URI;
 import java.util.concurrent.ConcurrentHashMap;
@@ -48,6 +50,27 @@ public class S3ClientFactory {
             return S3Client.builder()
                 .credentialsProvider(auth)
                 .endpointOverride(URI.create(storage.getEndpoint()))
+                .region(Region.US_EAST_1)
+                .serviceConfiguration(S3Configuration.builder().chunkedEncodingEnabled(false).build())
+                .build();
+        });
+    }
+
+    /**
+     * 使用STS临时凭证创建S3客户端
+     *
+     * @param stsCredentials STS临时凭证
+     * @return S3客户端
+     */
+    public S3Client getClientWithSts(StsCredentialsResp stsCredentials) {
+        String key = "sts_" + stsCredentials.getEndpoint() + "|" + stsCredentials.getAccessKeyId();
+        return CLIENT_CACHE.computeIfAbsent(key, k -> {
+            StaticCredentialsProvider auth = StaticCredentialsProvider.create(AwsSessionCredentials
+                .create(stsCredentials.getAccessKeyId(), stsCredentials.getSecretAccessKey(), stsCredentials
+                    .getSessionToken()));
+            return S3Client.builder()
+                .credentialsProvider(auth)
+                .endpointOverride(URI.create(stsCredentials.getEndpoint()))
                 .region(Region.US_EAST_1)
                 .serviceConfiguration(S3Configuration.builder().chunkedEncodingEnabled(false).build())
                 .build();
