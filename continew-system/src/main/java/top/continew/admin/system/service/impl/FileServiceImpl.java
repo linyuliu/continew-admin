@@ -290,7 +290,8 @@ public class FileServiceImpl extends BaseServiceImpl<FileMapper, FileDO, FileRes
                 return;
             }
             // user/avatar/ => user、avatar
-            String[] parentPathParts = StrUtil.split(parentPath, StringConstants.SLASH, false, true).toArray(String[]::new);
+            String[] parentPathParts = StrUtil.split(parentPath, StringConstants.SLASH, false, true)
+                .toArray(String[]::new);
             String lastPath = StringConstants.SLASH;
             StringBuilder currentPathBuilder = new StringBuilder();
             for (int i = 0; i < parentPathParts.length; i++) {
