@@ -23,6 +23,7 @@ import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.dromara.x.file.storage.core.FileStorageProperties;
 import org.springframework.web.bind.annotation.*;
 import top.continew.admin.system.model.req.StsCredentialsReq;
 import top.continew.admin.system.model.resp.StsCredentialsResp;
@@ -53,6 +54,19 @@ public class StsCredentialsController {
     @PostMapping("/credentials")
     public StsCredentialsResp getStsCredentials(@RequestBody @Valid StsCredentialsReq req) {
         return stsCredentialsService.getStsCredentials(req);
+    }
+
+    /**
+     * 获取 X File Storage 配置（含STS临时凭证）
+     *
+     * @param req 请求参数
+     * @return X File Storage AmazonS3Config配置
+     */
+    @Operation(summary = "获取 X File Storage 配置", description = "获取包含STS临时凭证的X File Storage配置，用于集成X File Storage框架")
+    @SaCheckPermission("system:storage:getStsCredentials")
+    @PostMapping("/x-file-storage-config")
+    public FileStorageProperties.AmazonS3Config getStsAmazonS3Config(@RequestBody @Valid StsCredentialsReq req) {
+        return stsCredentialsService.createStsAmazonS3Config(req);
     }
 
     /**

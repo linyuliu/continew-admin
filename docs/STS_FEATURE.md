@@ -2,7 +2,17 @@
 
 ## 概述
 
-STS (Security Token Service) 临时访问凭证功能为 ContiNew Admin 提供了更安全、更高效的文件上传解决方案。通过使用STS临时凭证，客户端可以直接向S3兼容的存储服务上传文件，而无需通过服务器中转，从而减少服务器带宽消耗并提高上传安全性。
+STS (Security Token Service) 临时访问凭证功能为 ContiNew Admin 提供了更安全、更高效的文件上传解决方案。该功能与项目现有的 **X File Storage** 框架深度集成，通过使用STS临时凭证，客户端可以直接向S3兼容的存储服务上传文件，而无需通过服务器中转，从而减少服务器带宽消耗并提高上传安全性。
+
+## 与 X File Storage 集成
+
+本项目已集成 [X File Storage](https://x-file-storage.xuyanwu.cn/) 框架，STS功能在此基础上扩展，提供：
+
+- **无缝集成**：STS临时凭证与X File Storage配置系统结合
+- **统一管理**：通过现有的存储管理体系统一配置和管理
+- **兼容性保证**：不影响现有的文件上传功能，可与传统上传方式并存
+
+> **注意**：由于X File Storage当前版本对STS SessionToken的支持有限，推荐使用直接的STS凭证接口(`/system/sts/credentials`)在客户端进行集成，以获得完整的STS功能支持。
 
 ## 核心优势
 
@@ -121,6 +131,37 @@ continew:
 }
 ```
 
+### 获取 X File Storage 配置
+
+**接口**: `POST /system/sts/x-file-storage-config`
+
+**权限**: `system:storage:getStsCredentials`
+
+**描述**: 获取包含STS临时凭证的X File Storage AmazonS3Config配置
+
+**注意**: 由于X File Storage当前版本不支持STS SessionToken，此接口主要用于演示集成概念。实际使用建议直接使用 `/system/sts/credentials` 接口。
+
+**请求参数**:
+```json
+{
+    "storageCode": "oss-default",
+    "pathPrefix": "upload/files/",
+    "durationSeconds": 3600
+}
+```
+
+**响应示例**:
+```json
+{
+    "platform": "oss-default-sts-1640995200000",
+    "accessKey": "ASIA...",
+    "secretKey": "...",
+    "endPoint": "https://s3.amazonaws.com",
+    "bucketName": "my-bucket",
+    "domain": "https://cdn.example.com/"
+}
+```
+
 ### 刷新STS临时凭证缓存
 
 **接口**: `POST /system/sts/refresh/{storageCode}`
@@ -129,7 +170,7 @@ continew:
 
 ## 使用方式
 
-### 客户端实现
+### 方式一：直接使用STS凭证
 
 1. **获取临时凭证**
 ```javascript
@@ -161,6 +202,51 @@ await s3Client.upload({
     Body: fileData
 }).promise();
 ```
+
+### 方式二：集成 X File Storage 框架
+
+**推荐方式**：使用 X File Storage 配置接口，更好地与现有框架集成
+
+1. **获取 X File Storage 配置**
+```javascript
+const config = await fetch('/system/sts/x-file-storage-config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+        storageCode: 'oss-default',
+        pathPrefix: 'upload/files/',
+        durationSeconds: 3600
+    })
+}).then(res => res.json());
+```
+
+2. **使用配置进行上传**
+```javascript
+// 配置包含了所有必要的STS信息，可以直接用于X File Storage客户端
+// 这种方式与项目的存储管理体系保持一致
+```
+
+### 服务端集成示例
+
+```java
+@Service
+public class FileUploadService {
+    
+    @Autowired
+    private StorageService storageService;
+    
+    /**
+     * 为客户端获取STS临时凭证
+     */
+    public StsCredentialsResp getUploadCredentials(String storageCode, String pathPrefix) {
+        StsCredentialsReq req = new StsCredentialsReq();
+        req.setStorageCode(storageCode);
+        req.setPathPrefix(pathPrefix);
+        req.setDurationSeconds(3600);
+        
+        return stsCredentialsService.getStsCredentials(req);
+    }
+}
 
 ### 分片上传示例
 

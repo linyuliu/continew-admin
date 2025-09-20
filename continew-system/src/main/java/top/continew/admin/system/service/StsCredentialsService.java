@@ -16,6 +16,7 @@
 
 package top.continew.admin.system.service;
 
+import org.dromara.x.file.storage.core.FileStorageProperties;
 import top.continew.admin.system.model.req.StsCredentialsReq;
 import top.continew.admin.system.model.resp.StsCredentialsResp;
 
@@ -41,4 +42,12 @@ public interface StsCredentialsService {
      * @param storageCode 存储平台编码
      */
     void refreshStsCredentials(String storageCode);
+
+    /**
+     * 为X File Storage创建带STS临时凭证的AmazonS3Config
+     *
+     * @param req 请求参数
+     * @return AmazonS3Config配置
+     */
+    FileStorageProperties.AmazonS3Config createStsAmazonS3Config(StsCredentialsReq req);
 }

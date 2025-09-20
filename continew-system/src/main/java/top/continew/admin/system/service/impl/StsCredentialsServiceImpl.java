@@ -19,6 +19,7 @@ package top.continew.admin.system.service.impl;
 import cn.hutool.core.util.StrUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.dromara.x.file.storage.core.FileStorageProperties;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -122,6 +123,31 @@ public class StsCredentialsServiceImpl implements StsCredentialsService {
         log.info("刷新STS临时凭证缓存: storageCode={}", storageCode);
         // 移除对应的STS客户端缓存
         STS_CLIENT_CACHE.entrySet().removeIf(entry -> entry.getKey().startsWith(storageCode));
+    }
+
+    /**
+     * 为X File Storage创建带STS临时凭证的AmazonS3Config
+     *
+     * @param req 请求参数
+     * @return AmazonS3Config配置
+     */
+    public FileStorageProperties.AmazonS3Config createStsAmazonS3Config(StsCredentialsReq req) {
+        StsCredentialsResp credentials = getStsCredentials(req);
+        StorageDO storage = storageService.getByCode(req.getStorageCode());
+
+        FileStorageProperties.AmazonS3Config config = new FileStorageProperties.AmazonS3Config();
+        config.setPlatform(storage.getCode() + "-sts-" + System.currentTimeMillis());
+        config.setAccessKey(credentials.getAccessKeyId());
+        config.setSecretKey(credentials.getSecretAccessKey());
+        // 注意：X File Storage当前版本不支持sessionToken
+        // 需要在客户端使用完整的STS凭证（包括sessionToken）
+        config.setEndPoint(credentials.getEndpoint());
+        config.setBucketName(credentials.getBucketName());
+        config.setDomain(storage.getDomain());
+
+        log.warn("X File Storage框架当前版本不支持STS sessionToken，建议使用直接的STS凭证接口进行客户端集成");
+
+        return config;
     }
 
     /**

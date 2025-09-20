@@ -70,6 +70,15 @@ public interface StorageService extends BaseService<StorageResp, StorageResp, St
     void load(StorageDO storage);
 
     /**
+     * 使用STS临时凭证加载存储引擎
+     *
+     * @param storage         存储配置
+     * @param pathPrefix      路径前缀
+     * @param durationSeconds 凭证有效期
+     */
+    void loadWithSts(StorageDO storage, String pathPrefix, Integer durationSeconds);
+
+    /**
      * 卸载存储引擎
      *
      * @param storage 存储配置
