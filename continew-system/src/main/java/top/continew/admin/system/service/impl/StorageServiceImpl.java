@@ -22,6 +22,7 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.core.util.URLUtil;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.dromara.x.file.storage.core.FileStorageProperties;
 import org.dromara.x.file.storage.core.FileStorageService;
 import org.dromara.x.file.storage.core.FileStorageServiceBuilder;
@@ -37,9 +38,12 @@ import top.continew.admin.system.mapper.StorageMapper;
 import top.continew.admin.system.model.entity.StorageDO;
 import top.continew.admin.system.model.query.StorageQuery;
 import top.continew.admin.system.model.req.StorageReq;
+import top.continew.admin.system.model.req.StsCredentialsReq;
 import top.continew.admin.system.model.resp.StorageResp;
+import top.continew.admin.system.model.resp.StsCredentialsResp;
 import top.continew.admin.system.service.FileService;
 import top.continew.admin.system.service.StorageService;
+import top.continew.admin.system.service.StsCredentialsService;
 import top.continew.starter.core.util.ExceptionUtils;
 import top.continew.starter.core.util.SpringWebUtils;
 import top.continew.starter.core.util.validation.CheckUtils;
@@ -55,6 +59,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * @author Charles7c
  * @since 2023/12/26 22:09
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class StorageServiceImpl extends BaseServiceImpl<StorageMapper, StorageDO, StorageResp, StorageResp, StorageQuery, StorageReq> implements StorageService {
@@ -62,6 +67,8 @@ public class StorageServiceImpl extends BaseServiceImpl<StorageMapper, StorageDO
     private final FileStorageService fileStorageService;
     @Resource
     private FileService fileService;
+    @Resource
+    private StsCredentialsService stsCredentialsService;
 
     @Override
     public void beforeCreate(StorageReq req) {
@@ -218,6 +225,29 @@ public class StorageServiceImpl extends BaseServiceImpl<StorageMapper, StorageDO
             SpringWebUtils.deRegisterResourceHandler(MapUtil.of(URLUtil.url(storage.getDomain()).getPath(), storage
                 .getBucketName()));
         }
+    }
+
+    @Override
+    public void loadWithSts(StorageDO storage, String pathPrefix, Integer durationSeconds) {
+        if (!StorageTypeEnum.OSS.equals(storage.getType())) {
+            throw new IllegalArgumentException("只有OSS类型的存储支持STS临时凭证");
+        }
+
+        // 注意：由于X File Storage当前版本不完全支持STS SessionToken
+        // 此方法主要用于演示集成概念，实际使用建议直接调用STS凭证接口
+        log.warn("X File Storage框架当前版本对STS支持有限，建议使用 /system/sts/credentials 接口获取完整STS凭证进行客户端集成");
+
+        // 创建STS请求
+        StsCredentialsReq stsReq = new StsCredentialsReq();
+        stsReq.setStorageCode(storage.getCode());
+        stsReq.setPathPrefix(pathPrefix);
+        stsReq.setDurationSeconds(durationSeconds);
+
+        // 获取STS凭证但不加载到X File Storage（因为缺少sessionToken支持）
+        StsCredentialsResp credentials = stsCredentialsService.getStsCredentials(stsReq);
+
+        log.info("STS临时凭证生成成功，请在客户端使用完整凭证: storageCode={}, pathPrefix={}, expiration={}", storage
+            .getCode(), pathPrefix, credentials.getExpiration());
     }
 
     /**
